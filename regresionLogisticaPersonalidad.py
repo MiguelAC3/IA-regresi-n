@@ -71,16 +71,31 @@ results_df['prob_extrovert'] = y_proba
 
 y_pred = model.predict(x_test)
 matrixC = metrics.confusion_matrix(y_test, y_pred)
-print("\nMatriz de confusión:\n", matrixC)
+
+accuracy = metrics.accuracy_score(y_test, y_pred)
+precision = metrics.precision_score(y_test, y_pred)
+recall = metrics.recall_score(y_test, y_pred)
+f1 = metrics.f1_score(y_test, y_pred)
+error = 1 - accuracy
+log_loss = metrics.log_loss(y_test, y_proba)
+
+print("\n" + "="*50)
+print("MÉTRICAS DE EVALUACIÓN - REGRESIÓN LOGÍSTICA")
+print("="*50)
+print(f"Error:          {error:.4f}")
+print(f"Exactitud:      {accuracy:.4f}")
+print(f"Precisión:      {precision:.4f}")
+print(f"Exhaustividad:  {recall:.4f}")
+print(f"F1-Score:       {f1:.4f}")
+print(f"Log Loss:       {log_loss:.4f}")
+print("="*50)
+
+print("\nMatriz de Confusión:")
+print(matrixC)
 
 cm_display = metrics.ConfusionMatrixDisplay(matrixC, display_labels=['Introvert', 'Extrovert'])
 cm_display.plot()
 plt.show()
-
-print("Accuracy:", metrics.accuracy_score(y_test, y_pred))
-print("Precision:", metrics.precision_score(y_test, y_pred))
-print("Recall:", metrics.recall_score(y_test, y_pred))
-print("F1:", metrics.f1_score(y_test, y_pred))
 
 print("\nReporte de clasificación:\n", classification_report(y_test, y_pred, target_names=['Introvert', 'Extrovert']))
 

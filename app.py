@@ -5,14 +5,18 @@ import joblib
 
 st.set_page_config(page_title="Predicción de Personalidad", page_icon="🧠")
 
-st.title("🧠 Detector de Personalidad con IA")
-st.write("Ingresa tus datos y elige qué Inteligencia Artificial quieres usar para el análisis.")
-
 st.sidebar.header("Configuración del Modelo")
 tipo_modelo = st.sidebar.radio(
     "Elige el modelo de predicción:",
     ("Red Neuronal (Deep Learning)", "Regresión Logística (Clásico)")
 )
+
+if tipo_modelo == "Red Neuronal (Deep Learning)":
+    st.title("🧠 Detector de Personalidad con Red Neuronal")
+else:
+    st.title("🧠 Detector de Personalidad con Regresión Logística")
+
+st.write("Ingresa tus datos para que la Inteligencia Artificial analice tu personalidad.")
 
 @st.cache_resource
 def cargar_red_neuronal():
