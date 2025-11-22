@@ -1,26 +1,36 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
+import joblib # Para cargar el modelo de regresión logística
 
 # 1. Configuración de la página
 st.set_page_config(page_title="Predicción de Personalidad", page_icon="🧠")
 
 st.title("🧠 Detector de Personalidad con IA")
-st.write("Ingresa tus datos para que la Red Neuronal prediga si eres Introvertido o Extrovertido.")
+st.write("Ingresa tus datos y elige qué Inteligencia Artificial quieres usar para el análisis.")
 
-# 2. Cargar el modelo entrenado (asegúrate de que el archivo .h5 esté en la misma carpeta)
-@st.cache_resource # Esto hace que no recargue el modelo en cada click
-def load_model():
+# --- BARRA LATERAL (SIDEBAR) ---
+st.sidebar.header("Configuración del Modelo")
+tipo_modelo = st.sidebar.radio(
+    "Elige el modelo de predicción:",
+    ("Red Neuronal (Deep Learning)", "Regresión Logística (Clásico)")
+)
+
+st.sidebar.info(
+    "ℹ️ **Nota:** La Red Neuronal suele captar patrones complejos, "
+    "mientras que la Regresión Logística es excelente para relaciones lineales directas."
+)
+
+# 2. Funciones para cargar modelos (con caché para velocidad)
+@st.cache_resource
+def cargar_red_neuronal():
     return tf.keras.models.load_model('modelo_personalidad.h5')
 
-try:
-    modelo = load_model()
-except:
-    st.error("No se encontró el archivo 'modelo_personalidad.h5'. Asegúrate de subirlo.")
-    st.stop()
+@st.cache_resource
+def cargar_logistica():
+    return joblib.load('modelo_logistica.pkl')
 
-# 3. Crear el formulario para el usuario (Interfaz Gráfica)
-# Usamos columnas para que se vea ordenado
+# 3. Formulario de entrada (Es el mismo para ambos modelos)
 col1, col2 = st.columns(2)
 
 with col1:
@@ -30,7 +40,6 @@ with col1:
     going_outside = st.slider("Frecuencia de salir (escala)", 0, 100, 50)
 
 with col2:
-    # Inputs binarios (Sí/No) convertidos a 1/0
     stage_fear_opt = st.selectbox("¿Tienes miedo escénico?", ["No", "Sí"])
     stage_fear = 1 if stage_fear_opt == "Sí" else 0
 
@@ -39,27 +48,47 @@ with col2:
     
     post_frequency = st.slider("Frecuencia de posteo en redes", 0.0, 50.0, 1.0)
 
-# 4. Botón de Predicción
+# 4. Lógica de Predicción
 if st.button("Analizar Personalidad"):
-    # Crear el array con los datos en el MISMO ORDEN que usaste para entrenar (X)
+    
+    # Preparar datos (el formato debe ser numpy array 2D)
     datos_entrada = np.array([[
-        time_spent_alone,
-        stage_fear,
-        social_event,
-        going_outside,
-        drained,
-        friends_circle,
-        post_frequency
+        time_spent_alone, stage_fear, social_event, going_outside,
+        drained, friends_circle, post_frequency
     ]]).astype('float32')
-    
-    # Predicción
-    prediction_prob = modelo.predict(datos_entrada)
-    prediction_class = (prediction_prob > 0.5).astype(int)[0][0]
-    
-    # Mostrar resultados
+
     st.write("---")
-    if prediction_class == 1:
-        st.success(f"Resultados: **EXTROVERTIDO** (Confianza: {prediction_prob[0][0]*100:.2f}%)")
-        st.balloons()
-    else:
-        st.info(f"Resultados: **INTROVERTIDO** (Confianza: {(1-prediction_prob[0][0])*100:.2f}%)")
+    
+    try:
+        if tipo_modelo == "Red Neuronal (Deep Learning)":
+            modelo = cargar_red_neuronal()
+            # La red neuronal devuelve una probabilidad (ej: 0.85)
+            probabilidad = modelo.predict(datos_entrada)[0][0]
+            es_extrovertido = probabilidad > 0.5
+            confianza = probabilidad if es_extrovertido else (1 - probabilidad)
+            
+        else: # Regresión Logística
+            modelo = cargar_logistica()
+            # Logística también puede dar probabilidad con predict_proba
+            # Devuelve array [[prob_0, prob_1]]
+            probs = modelo.predict_proba(datos_entrada)
+            probabilidad = probs[0][1] # Probabilidad de ser clase 1 (Extrovertido)
+            es_extrovertido = probabilidad > 0.5
+            confianza = probabilidad if es_extrovertido else (1 - probabilidad)
+
+        # Mostrar Resultados
+        st.subheader(f"Modelo usado: {tipo_modelo}")
+        
+        if es_extrovertido:
+            st.success(f"Resultado: **EXTROVERTIDO**")
+            st.progress(float(confianza))
+            st.write(f"Nivel de confianza del modelo: {confianza*100:.2f}%")
+            st.balloons()
+        else:
+            st.info(f"Resultado: **INTROVERTIDO**")
+            st.progress(float(confianza))
+            st.write(f"Nivel de confianza del modelo: {confianza*100:.2f}%")
+
+    except Exception as e:
+        st.error(f"Error al cargar el modelo: {e}")
+        st.warning("Asegúrate de que los archivos .h5 y .pkl estén subidos en GitHub.")
