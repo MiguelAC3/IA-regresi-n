@@ -1,27 +1,19 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-import joblib # Para cargar el modelo de regresión logística
+import joblib
 
-# 1. Configuración de la página
 st.set_page_config(page_title="Predicción de Personalidad", page_icon="🧠")
 
 st.title("🧠 Detector de Personalidad con IA")
 st.write("Ingresa tus datos y elige qué Inteligencia Artificial quieres usar para el análisis.")
 
-# --- BARRA LATERAL (SIDEBAR) ---
 st.sidebar.header("Configuración del Modelo")
 tipo_modelo = st.sidebar.radio(
     "Elige el modelo de predicción:",
     ("Red Neuronal (Deep Learning)", "Regresión Logística (Clásico)")
 )
 
-st.sidebar.info(
-    "ℹ️ **Nota:** La Red Neuronal suele captar patrones complejos, "
-    "mientras que la Regresión Logística es excelente para relaciones lineales directas."
-)
-
-# 2. Funciones para cargar modelos (con caché para velocidad)
 @st.cache_resource
 def cargar_red_neuronal():
     return tf.keras.models.load_model('modelo_personalidad.h5')
@@ -30,7 +22,6 @@ def cargar_red_neuronal():
 def cargar_logistica():
     return joblib.load('modelo_logistica.pkl')
 
-# 3. Formulario de entrada (Es el mismo para ambos modelos)
 col1, col2 = st.columns(2)
 
 with col1:
@@ -48,10 +39,8 @@ with col2:
     
     post_frequency = st.slider("Frecuencia de posteo en redes", 0.0, 50.0, 1.0)
 
-# 4. Lógica de Predicción
 if st.button("Analizar Personalidad"):
     
-    # Preparar datos (el formato debe ser numpy array 2D)
     datos_entrada = np.array([[
         time_spent_alone, stage_fear, social_event, going_outside,
         drained, friends_circle, post_frequency
@@ -62,21 +51,17 @@ if st.button("Analizar Personalidad"):
     try:
         if tipo_modelo == "Red Neuronal (Deep Learning)":
             modelo = cargar_red_neuronal()
-            # La red neuronal devuelve una probabilidad (ej: 0.85)
             probabilidad = modelo.predict(datos_entrada)[0][0]
             es_extrovertido = probabilidad > 0.5
             confianza = probabilidad if es_extrovertido else (1 - probabilidad)
             
-        else: # Regresión Logística
+        else:
             modelo = cargar_logistica()
-            # Logística también puede dar probabilidad con predict_proba
-            # Devuelve array [[prob_0, prob_1]]
             probs = modelo.predict_proba(datos_entrada)
-            probabilidad = probs[0][1] # Probabilidad de ser clase 1 (Extrovertido)
+            probabilidad = probs[0][1]
             es_extrovertido = probabilidad > 0.5
             confianza = probabilidad if es_extrovertido else (1 - probabilidad)
 
-        # Mostrar Resultados
         st.subheader(f"Modelo usado: {tipo_modelo}")
         
         if es_extrovertido:
